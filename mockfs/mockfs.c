@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 #include <editline/readline.h>
 #include <argp.h>
 
@@ -33,6 +35,13 @@ int main(int argc, char** argv) {
     arguments.mode = NPRST;
 
     argp_parse(&argp, argc, argv, 0, 0, &arguments);
-    
+
+    while(1) {
+        char* input = readline("> ");
+
+
+        add_history(input);
+        free(input);
+    }
     return 0;
 }

@@ -1,1 +1,0 @@
-cmd_/home/val/Projects/kernel/derek.ko := ld -r -m elf_x86_64  -z max-page-size=0x200000  --build-id  -T ./scripts/module-common.lds -o /home/val/Projects/kernel/derek.ko /home/val/Projects/kernel/derek.o /home/val/Projects/kernel/derek.mod.o;  true

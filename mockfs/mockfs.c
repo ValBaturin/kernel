@@ -53,7 +53,9 @@ int main(int argc, char **argv) {
     }
 
     token = strtok(NULL, "/");
-    printf("->%c\n", token[-1]);
+    if (token != NULL) {
+      printf("->%c\n", token[-1]);
+    }
     while (token != NULL) {
       printf("->%s\n", token);
       token = strtok(NULL, "/");

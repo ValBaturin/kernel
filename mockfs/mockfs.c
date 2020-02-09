@@ -11,8 +11,7 @@ const char *argp_program_bug_address =
 static char doc[] = "mockfs";
 static char args_doc[] = "";
 static struct argp_option options[] = {
-    {"persist", 'e', 0, 0,
-     "persistant storage, so reliable (NOT IMPLEMENTED THO)"},
+    {"persist", 'e', 0, 0, "persistant storage, so reliable (NOT IMPLEMENTED)"},
     {0}};
 
 struct arguments {
@@ -128,11 +127,6 @@ int main(int argc, char **argv) {
     } else if (strcmp(token, "cat") == 0) {
       printf("cat\n");
     }
-
-    // while (token != NULL) {
-    //  printf("->%s\n", token);
-    //  next_obj(&token);
-    //}
 
     free(input);
   }

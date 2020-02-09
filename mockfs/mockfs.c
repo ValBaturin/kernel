@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -34,6 +35,45 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
 
 static struct argp argp = {options, parse_opt, args_doc, doc, 0, 0, 0};
 
+bool is_absolute(char **token) {
+  *token = strtok(NULL, "/");
+  if ((*token != NULL) && ((*token)[-1] == '/')) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+void next_obj(char **token) { *token = strtok(NULL, "/"); }
+
+enum objTYPE { FSFILE, FSDIR };
+
+struct inode {
+  enum objTYPE type;
+  char *name;
+  void **data;
+  int size;
+};
+
+struct filesystem {
+  int current_ptr;
+  struct inode **inodes;
+  int capacity;
+};
+
+void init_fs(struct filesystem *fs, int size) {
+  fs->capacity = size;
+  fs->inodes = calloc(fs->capacity, sizeof(struct inode *));
+  fs->current_ptr = 0;
+
+  struct inode *curr = fs->inodes[fs->current_ptr];
+  curr = malloc(sizeof(struct inode));
+  curr->size = 0;
+  curr->type = FSDIR;
+  curr->name = "/";
+  curr->data = malloc(1); // init some memory for later use of realloc
+}
+
 int main(int argc, char **argv) {
 
   struct arguments arguments;
@@ -42,26 +82,48 @@ int main(int argc, char **argv) {
 
   argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
+  struct filesystem fs;
+  init_fs(&fs, 1024);
+  struct inode *curr = fs.inodes[fs.current_ptr];
+
+  char *current_dir = "/";
+  char prompt[256];
+  snprintf(prompt, sizeof(prompt), "%s\n>", current_dir);
+
   while (1) {
-    char *input = readline("> ");
+    char *input = readline(prompt);
+    add_history(input);
 
     char *token = strtok(input, " ");
     if (strcmp(token, "cd") == 0) {
       printf("cd\n");
-    } else if (strcmp(token, "pwd") == 0) {
-      printf("pwd\n");
+    } else if (strcmp(token, "mkdir") == 0) {
+      curr->size++;
+      curr->data = realloc(curr->data, (curr->size) * sizeof(struct inode *));
+      struct inode *new_dir = (curr->data[curr->size - 1]);
+      new_dir->size = 0;
+      new_dir->type = FSDIR;
+      new_dir->name = malloc(80 * sizeof(char *));
+      snprintf(new_dir->name, sizeof(new_dir->name), "%s\n>", token);
+      new_dir->data = malloc(1); // init some memory for later use of realloc
+    } else if (strcmp(token, "touch") == 0) {
+      printf("touch\n");
+    } else if (strcmp(token, "ls") == 0) {
+      printf("ls\n");
+    } else if (strcmp(token, "rm") == 0) {
+      printf("rm\n");
+    } else if (strcmp(token, "rmdir") == 0) {
+      printf("rmdir\n");
+    } else if (strcmp(token, "cat") == 0) {
+      printf("cat\n");
     }
 
-    token = strtok(NULL, "/");
-    if (token != NULL) {
-      printf("->%c\n", token[-1]);
-    }
+    printf("ABS: %i\n", is_absolute(&token));
     while (token != NULL) {
       printf("->%s\n", token);
-      token = strtok(NULL, "/");
+      next_obj(&token);
     }
 
-    add_history(input);
     free(input);
   }
   return 0;

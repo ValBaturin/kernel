@@ -5,6 +5,10 @@
 #include <argp.h>
 #include <editline/readline.h>
 
+// 1 MB disk
+#define BLOCK_SIZE 512
+#define BLOCK_NUM 2048
+
 const char *argp_program_version = "0.1";
 const char *argp_program_bug_address =
     "<val.baturin@serokell.io> or <val@baturin.me>";
@@ -46,6 +50,14 @@ bool is_absolute(char **token) {
 void next_obj(char **token) { *token = strtok(NULL, "/"); }
 
 enum objTYPE { FSFILE, FSDIR };
+
+struct disk {
+  void *storage;
+};
+
+void init_disk(struct disk *d, int bsize, int bnum) {
+  d->storage = calloc(BLOCK_NUM, BLOCK_SIZE);
+}
 
 struct inode {
   enum objTYPE type;

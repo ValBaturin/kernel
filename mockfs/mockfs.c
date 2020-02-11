@@ -59,26 +59,26 @@ void init_disk(struct disk *d, int bsize, int bnum) {
   d->storage = calloc(BLOCK_NUM, BLOCK_SIZE);
 }
 
-struct inode {
+// TODO check that fsobj struct size is actually blocksize
+struct fsobj {
+  bool available;
   enum objTYPE type;
-  char *name;
-  void **data;
+  char name[20]; // LIMIT ON NAME IS 20 CHARS
   int size;
+  void *data[BLOCK_SIZE - (1 + 1 + 20 + 4)];
 };
 
 struct filesystem {
-  int current_ptr;
-  struct inode **inodes;
-  int capacity;
+  int current_ptr; // which fs object is currently working dir;
 };
 
 void init_fs(struct filesystem *fs, int size) {
   fs->capacity = size;
-  fs->inodes = calloc(fs->capacity, sizeof(struct inode *));
+  fs->fsobjs = calloc(fs->capacity, sizeof(struct fsobj *));
   fs->current_ptr = 0;
 
-  fs->inodes[fs->current_ptr] = malloc(sizeof(struct inode *));
-  struct inode *curr = fs->inodes[fs->current_ptr];
+  fs->fsobjs[fs->current_ptr] = malloc(sizeof(struct fsobj *));
+  struct fsobj *curr = fs->fsobjs[fs->current_ptr];
   curr->size = 0;
   curr->type = FSDIR;
   curr->name = "/";
@@ -95,7 +95,7 @@ int main(int argc, char **argv) {
 
   struct filesystem fs;
   init_fs(&fs, 1024);
-  struct inode *curr = fs.inodes[fs.current_ptr];
+  struct fsobj *curr = fs.fsobjs[fs.current_ptr];
 
   char *current_dir = "/";
   char prompt[256];
@@ -112,10 +112,10 @@ int main(int argc, char **argv) {
     } else if (strcmp(token, "mkdir") == 0) {
       is_absolute(&token);
       curr->size++;
-      curr->data = realloc(curr->data, (curr->size) * sizeof(struct inode *));
-      curr->data[curr->size - 1] = malloc(sizeof(struct inode));
+      curr->data = realloc(curr->data, (curr->size) * sizeof(struct fsobj *));
+      curr->data[curr->size - 1] = malloc(sizeof(struct fsobj));
 
-      struct inode *new_dir = curr->data[curr->size - 1];
+      struct fsobj *new_dir = curr->data[curr->size - 1];
       new_dir->size = 0;
       new_dir->type = FSDIR;
 
@@ -127,7 +127,7 @@ int main(int argc, char **argv) {
     } else if (strcmp(token, "touch") == 0) {
       printf("touch\n");
     } else if (strcmp(token, "ls") == 0) {
-      struct inode **content = curr->data;
+      struct fsobj **content = curr->data;
       for (int i = 0; i < curr->size; i++) {
         printf("%s\n", content[i]->name);
       }

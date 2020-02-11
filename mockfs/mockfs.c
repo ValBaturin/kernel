@@ -145,10 +145,9 @@ int main(int argc, char **argv) {
     } else if (strcmp(token, "touch") == 0) {
       printf("touch\n");
     } else if (strcmp(token, "ls") == 0) {
-      // struct fsobj **content = curr->data;
-      // for (int i = 0; i < curr->size; i++) {
-      //  printf("%s\n", content[i]->name);
-      //}
+      for (int i = 0; i < curr->size; i++) {
+        printf("%s\n", get_fso(fs, (int)curr->data[i * sizeof(int)])->name);
+      }
 
     } else if (strcmp(token, "rm") == 0) {
       printf("rm\n");

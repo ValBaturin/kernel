@@ -8,6 +8,7 @@
 // 1 MB disk
 #define BLOCK_SIZE 512
 #define BLOCK_NUM 2048
+#define NAME_LIMIT 20
 
 const char *argp_program_version = "0.1";
 const char *argp_program_bug_address =
@@ -51,38 +52,58 @@ void next_obj(char **token) { *token = strtok(NULL, "/"); }
 
 enum objTYPE { FSFILE, FSDIR };
 
-struct disk {
-  void *storage;
-};
-
-void init_disk(struct disk *d, int bsize, int bnum) {
-  d->storage = calloc(BLOCK_NUM, BLOCK_SIZE);
-}
+// struct disk {
+//  void *storage;
+//};
+//
+// void init_disk(struct disk *d) { d->storage = calloc(BLOCK_NUM, BLOCK_SIZE);
+// }
 
 // TODO check that fsobj struct size is actually blocksize
 struct fsobj {
-  bool available;
+  bool busy; // defaults to zero aka false due to calloc
   enum objTYPE type;
-  char name[20]; // LIMIT ON NAME IS 20 CHARS
-  int size;
-  void *data[BLOCK_SIZE - (1 + 1 + 20 + 4)];
+  char name[NAME_LIMIT];
+  int size; // must be less than data size for now
+
+  // for FSDIR data is a list of contect inside the dir
+  void *data[BLOCK_SIZE - (1 + 1 + NAME_LIMIT + 4)];
 };
 
 struct filesystem {
-  int current_ptr; // which fs object is currently working dir;
+  void *disk;
+  int current_ptr; // which fs object is currently a working dir;
 };
 
-void init_fs(struct filesystem *fs, int size) {
-  fs->capacity = size;
-  fs->fsobjs = calloc(fs->capacity, sizeof(struct fsobj *));
+struct fsobj *get_fso(struct filesystem *fs, int i) {
+  return (struct fsobj *)&(fs->disk[i * BLOCK_SIZE]);
+}
+
+int get_available_fsobj(struct filesystem *fs) {
+  for (int i = 0; i < BLOCK_NUM; ++i) {
+    if (!get_fso(fs, i)->busy)
+      return i;
+  }
+  return -1;
+}
+
+void new_fsobj_dir(struct fsobj *available_fsobj, char *name) {
+  available_fsobj->busy = true;
+  available_fsobj->type = FSDIR;
+  snprintf(available_fsobj->name, sizeof(available_fsobj), "%s", name);
+}
+
+void new_fsobj_file(int i);
+
+void init_fs(struct filesystem *fs) {
+  fs->disk = calloc(BLOCK_NUM, BLOCK_SIZE);
   fs->current_ptr = 0;
 
-  fs->fsobjs[fs->current_ptr] = malloc(sizeof(struct fsobj *));
-  struct fsobj *curr = fs->fsobjs[fs->current_ptr];
-  curr->size = 0;
+  struct fsobj *curr = get_fso(fs, fs->current_ptr);
+  curr->busy = true;
   curr->type = FSDIR;
-  curr->name = "/";
-  curr->data = malloc(10); // init some memory for later use of realloc
+  snprintf(curr->name, sizeof(curr->name), "/");
+  curr->size = 0;
 }
 
 int main(int argc, char **argv) {
@@ -93,9 +114,10 @@ int main(int argc, char **argv) {
 
   argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
-  struct filesystem fs;
-  init_fs(&fs, 1024);
-  struct fsobj *curr = fs.fsobjs[fs.current_ptr];
+  struct filesystem *fs;
+  fs = malloc(sizeof(struct filesystem));
+  init_fs(fs);
+  struct fsobj *curr = get_fso(fs, fs->current_ptr);
 
   char *current_dir = "/";
   char prompt[256];
@@ -110,27 +132,23 @@ int main(int argc, char **argv) {
     if (strcmp(token, "cd") == 0) {
       printf("cd\n");
     } else if (strcmp(token, "mkdir") == 0) {
+      // todo remove is_absolute from here
       is_absolute(&token);
+
+      int i = get_available_fsobj(fs);
+
       curr->size++;
-      curr->data = realloc(curr->data, (curr->size) * sizeof(struct fsobj *));
-      curr->data[curr->size - 1] = malloc(sizeof(struct fsobj));
+      curr->data[(curr->size - 1) * sizeof(int)] = i;
 
-      struct fsobj *new_dir = curr->data[curr->size - 1];
-      new_dir->size = 0;
-      new_dir->type = FSDIR;
-
-      new_dir->name = malloc(80 * sizeof(char *));
-
-      snprintf(new_dir->name, sizeof(new_dir->name), "%s", token);
-      new_dir->data = malloc(1); // init some memory for later use of realloc
+      new_fsobj_dir(get_fso(fs, i), token);
 
     } else if (strcmp(token, "touch") == 0) {
       printf("touch\n");
     } else if (strcmp(token, "ls") == 0) {
-      struct fsobj **content = curr->data;
-      for (int i = 0; i < curr->size; i++) {
-        printf("%s\n", content[i]->name);
-      }
+      // struct fsobj **content = curr->data;
+      // for (int i = 0; i < curr->size; i++) {
+      //  printf("%s\n", content[i]->name);
+      //}
 
     } else if (strcmp(token, "rm") == 0) {
       printf("rm\n");

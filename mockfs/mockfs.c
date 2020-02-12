@@ -90,10 +90,14 @@ int get_available_fsobj(struct filesystem *fs) {
 void new_fsobj_dir(struct fsobj *available_fsobj, char *name) {
   available_fsobj->busy = true;
   available_fsobj->type = FSDIR;
-  snprintf(available_fsobj->name, sizeof(available_fsobj), "%s", name);
+  snprintf(available_fsobj->name, sizeof(available_fsobj->name), "%s", name);
 }
 
-void new_fsobj_file(int i);
+void new_fsobj_file(struct fsobj *available_fsobj, char *name) {
+  available_fsobj->busy = true;
+  available_fsobj->type = FSFILE;
+  snprintf(available_fsobj->name, sizeof(available_fsobj->name), "%s", name);
+}
 
 void init_fs(struct filesystem *fs) {
   fs->disk = calloc(BLOCK_NUM, BLOCK_SIZE);
@@ -133,7 +137,8 @@ int main(int argc, char **argv) {
       printf("cd\n");
     } else if (strcmp(token, "mkdir") == 0) {
       // todo remove is_absolute from here
-      is_absolute(&token);
+      // is_absolute(&token);
+      char *token = strtok(NULL, " ");
 
       int i = get_available_fsobj(fs);
 
@@ -143,7 +148,17 @@ int main(int argc, char **argv) {
       new_fsobj_dir(get_fso(fs, i), token);
 
     } else if (strcmp(token, "touch") == 0) {
-      printf("touch\n");
+
+      // todo remove is_absolute from here
+      is_absolute(&token);
+
+      int i = get_available_fsobj(fs);
+
+      curr->size++;
+      curr->data[(curr->size - 1) * sizeof(int)] = i;
+
+      new_fsobj_file(get_fso(fs, i), token);
+
     } else if (strcmp(token, "ls") == 0) {
       for (int i = 0; i < curr->size; i++) {
         struct fsobj *elem = get_fso(fs, (int)curr->data[i * sizeof(int)]);

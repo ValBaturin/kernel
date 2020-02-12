@@ -2,16 +2,15 @@
 
 ## Usage example
 ```
-> mkdir /home
 /
 > mkdir /root
+/
+> mkdir /home
 /
 > mkdir /usr
 /
 > ls
-home
-root
-usr
-/
->
+Type: dir	Name: root	Size: 0
+Type: dir	Name: home	Size: 0
+Type: dir	Name: usr	Size: 0
 ```

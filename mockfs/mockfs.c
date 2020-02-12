@@ -146,7 +146,12 @@ int main(int argc, char **argv) {
       printf("touch\n");
     } else if (strcmp(token, "ls") == 0) {
       for (int i = 0; i < curr->size; i++) {
-        printf("%s\n", get_fso(fs, (int)curr->data[i * sizeof(int)])->name);
+        struct fsobj *elem = get_fso(fs, (int)curr->data[i * sizeof(int)]);
+        if (elem->type == FSDIR) {
+          printf("Type: dir\tName: %s\tSize: %d\n", elem->name, elem->size);
+        } else if (elem->type == FSFILE) {
+          printf("Type: file\tName: %s\tSize: %d\n", elem->name, elem->size);
+        }
       }
 
     } else if (strcmp(token, "rm") == 0) {

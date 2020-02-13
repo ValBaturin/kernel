@@ -59,7 +59,6 @@ enum objTYPE { FSFILE, FSDIR };
 // void init_disk(struct disk *d) { d->storage = calloc(BLOCK_NUM, BLOCK_SIZE);
 // }
 
-// TODO check that fsobj struct size is actually blocksize
 struct fsobj {
   bool busy; // defaults to zero aka false due to calloc
   enum objTYPE type;
@@ -67,8 +66,9 @@ struct fsobj {
   int size; // must be less than data size for now
 
   // for FSDIR data is a list of contect inside the dir
-  void *data[BLOCK_SIZE - (1 + 1 + NAME_LIMIT + 4)];
-};
+  char data[BLOCK_SIZE -
+            (sizeof(bool) + sizeof(enum objTYPE) + NAME_LIMIT + sizeof(int))];
+} __attribute__((packed));
 
 struct filesystem {
   void *disk;

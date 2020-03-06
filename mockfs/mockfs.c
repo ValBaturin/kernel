@@ -52,13 +52,6 @@ void next_obj(char **token) { *token = strtok(NULL, "/"); }
 
 enum objTYPE { FSFILE, FSDIR };
 
-// struct disk {
-//  void *storage;
-//};
-//
-// void init_disk(struct disk *d) { d->storage = calloc(BLOCK_NUM, BLOCK_SIZE);
-// }
-
 struct fsobj {
   bool busy; // defaults to zero aka false due to calloc
   enum objTYPE type;

@@ -1,5 +1,5 @@
 mockfs: mockfs.c
-	gcc mockfs.c -o mockfs -ledit
+	gcc mockfs.c -o mockfsbin -ledit
 
 clean:
-	rm mockfs
+	rm mockfsbin

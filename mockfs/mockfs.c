@@ -39,15 +39,6 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
 
 static struct argp argp = {options, parse_opt, args_doc, doc, 0, 0, 0};
 
-bool is_absolute(char **token) {
-  *token = strtok(NULL, "/");
-  if ((*token != NULL) && ((*token)[-1] == '/')) {
-    return true;
-  } else {
-    return false;
-  }
-}
-
 void next_obj(char **token) { *token = strtok(NULL, "/"); }
 
 enum objTYPE { FSFILE, FSDIR };
@@ -70,6 +61,10 @@ struct filesystem {
 
 struct fsobj *get_fso(struct filesystem *fs, int i) {
   return (struct fsobj *)&(fs->disk[i * BLOCK_SIZE]);
+}
+
+struct fsobj *get_current_fso(struct filesystem *fs) {
+  return (struct fsobj *)&(fs->disk[fs->current_ptr * BLOCK_SIZE]);
 }
 
 int get_available_fsobj(struct filesystem *fs) {
@@ -114,24 +109,43 @@ int main(int argc, char **argv) {
   struct filesystem *fs;
   fs = malloc(sizeof(struct filesystem));
   init_fs(fs);
-  struct fsobj *curr = get_fso(fs, fs->current_ptr);
+  struct fsobj *curr = get_current_fso(fs);
 
-  char *current_dir = "/";
   char prompt[256];
-  snprintf(prompt, sizeof(prompt), "%s\n> ", current_dir);
 
   while (1) {
+    snprintf(prompt, sizeof(prompt), "%s\n> ", curr->name);
     char *input = readline(prompt);
     add_history(input);
 
     char *token = strtok(input, " ");
 
     if (strcmp(token, "cd") == 0) {
-      printf("cd\n");
-    } else if (strcmp(token, "mkdir") == 0) {
-      // todo remove is_absolute from here
-      // is_absolute(&token);
       char *token = strtok(NULL, " ");
+
+      if (token[0] == '/') {
+        fs->current_ptr = 0;
+        curr = get_current_fso(fs);
+      }
+
+      char *obj = strtok(token, "/");
+      while (obj) {
+        for (int i = 0; i < curr->size; i++) {
+          struct fsobj *candidate = get_fso(fs, (int)curr->data[i * sizeof(int)]);
+          if ((strcmp(obj, candidate->name) == 0) && candidate->type == FSDIR) {
+            fs->current_ptr = (int)curr->data[i * sizeof(int)];
+            curr = get_current_fso(fs);
+            break;
+          } else if (i == curr->size - 1) { // last iteration without success
+            return 1; // TODO add restore to initial position
+          }
+        }
+        obj = strtok(NULL, "/");
+      }
+
+    } else if (strcmp(token, "mkdir") == 0) {
+      char *token = strtok(NULL, " ");
+
 
       int i = get_available_fsobj(fs);
 
@@ -141,9 +155,9 @@ int main(int argc, char **argv) {
       new_fsobj_dir(get_fso(fs, i), token);
 
     } else if (strcmp(token, "touch") == 0) {
+      char *token = strtok(NULL, " ");
 
       // todo remove is_absolute from here
-      is_absolute(&token);
 
       int i = get_available_fsobj(fs);
 

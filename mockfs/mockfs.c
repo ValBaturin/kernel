@@ -131,7 +131,8 @@ int main(int argc, char **argv) {
       char *obj = strtok(token, "/");
       while (obj) {
         for (int i = 0; i < curr->size; i++) {
-          struct fsobj *candidate = get_fso(fs, (int)curr->data[i * sizeof(int)]);
+          struct fsobj *candidate =
+              get_fso(fs, (int)curr->data[i * sizeof(int)]);
           if ((strcmp(obj, candidate->name) == 0) && candidate->type == FSDIR) {
             fs->current_ptr = (int)curr->data[i * sizeof(int)];
             curr = get_current_fso(fs);
@@ -146,25 +147,34 @@ int main(int argc, char **argv) {
     } else if (strcmp(token, "mkdir") == 0) {
       char *token = strtok(NULL, " ");
 
+      if (token[0] == '/') {
+        fprintf(stdout, "\nERROR: NOT SUPPORTED\n");
+      }
 
-      int i = get_available_fsobj(fs);
+      else {
+        int i = get_available_fsobj(fs);
 
-      curr->size++;
-      curr->data[(curr->size - 1) * sizeof(int)] = i;
+        curr->size++;
+        curr->data[(curr->size - 1) * sizeof(int)] = i;
 
-      new_fsobj_dir(get_fso(fs, i), token);
+        new_fsobj_dir(get_fso(fs, i), token);
+      }
 
     } else if (strcmp(token, "touch") == 0) {
       char *token = strtok(NULL, " ");
 
-      // todo remove is_absolute from here
+      if (token[0] == '/') {
+        fprintf(stdout, "\nERROR: NOT SUPPORTED\n");
+      }
 
-      int i = get_available_fsobj(fs);
+      else {
+        int i = get_available_fsobj(fs);
 
-      curr->size++;
-      curr->data[(curr->size - 1) * sizeof(int)] = i;
+        curr->size++;
+        curr->data[(curr->size - 1) * sizeof(int)] = i;
 
-      new_fsobj_file(get_fso(fs, i), token);
+        new_fsobj_file(get_fso(fs, i), token);
+      }
 
     } else if (strcmp(token, "ls") == 0) {
       for (int i = 0; i < curr->size; i++) {

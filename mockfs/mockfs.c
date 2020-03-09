@@ -49,9 +49,10 @@ struct fsobj {
   char name[NAME_LIMIT];
   int size; // must be less than data size for now
 
-  // for FSDIR data is a list of contect inside the dir
-  char data[BLOCK_SIZE -
-            (sizeof(bool) + sizeof(enum objTYPE) + NAME_LIMIT + sizeof(int))];
+  // FSFILE data is a list of contect inside the dir
+  // FSDIR data is a list of ptrs to fsobj. data[0] is a parent ptr
+  char data[BLOCK_SIZE - (sizeof(bool) + sizeof(enum objTYPE) + NAME_LIMIT +
+                          sizeof(int) + sizeof(int))];
 } __attribute__((packed));
 
 struct filesystem {
@@ -75,10 +76,13 @@ int get_available_fsobj(struct filesystem *fs) {
   return -1;
 }
 
-void new_fsobj_dir(struct fsobj *available_fsobj, char *name) {
+void new_fsobj_dir(struct filesystem *fs, int i, char *name) {
+  struct fsobj *available_fsobj = get_fso(fs, i);
   available_fsobj->busy = true;
   available_fsobj->type = FSDIR;
   snprintf(available_fsobj->name, sizeof(available_fsobj->name), "%s", name);
+  available_fsobj->size = 1;
+  available_fsobj->data[0 * sizeof(int)] = fs->current_ptr;
 }
 
 void new_fsobj_file(struct fsobj *available_fsobj, char *name) {
@@ -95,7 +99,8 @@ void init_fs(struct filesystem *fs) {
   curr->busy = true;
   curr->type = FSDIR;
   snprintf(curr->name, sizeof(curr->name), "/");
-  curr->size = 0;
+  curr->size = 1;
+  curr->data[0 * sizeof(int)] = 0;
 }
 
 int main(int argc, char **argv) {
@@ -123,25 +128,31 @@ int main(int argc, char **argv) {
     if (strcmp(token, "cd") == 0) {
       char *token = strtok(NULL, " ");
 
-      if (token[0] == '/') {
-        fs->current_ptr = 0;
+      if (strcmp(token, "..") == 0) {
+        fs->current_ptr = (int)curr->data[0 * sizeof(int)];
         curr = get_current_fso(fs);
-      }
-
-      char *obj = strtok(token, "/");
-      while (obj) {
-        for (int i = 0; i < curr->size; i++) {
-          struct fsobj *candidate =
-              get_fso(fs, (int)curr->data[i * sizeof(int)]);
-          if ((strcmp(obj, candidate->name) == 0) && candidate->type == FSDIR) {
-            fs->current_ptr = (int)curr->data[i * sizeof(int)];
-            curr = get_current_fso(fs);
-            break;
-          } else if (i == curr->size - 1) { // last iteration without success
-            return 1; // TODO add restore to initial position
-          }
+      } else {
+        if (token[0] == '/') {
+          fs->current_ptr = 0;
+          curr = get_current_fso(fs);
         }
-        obj = strtok(NULL, "/");
+
+        char *obj = strtok(token, "/");
+        while (obj) {
+          for (int i = 1; i < curr->size; i++) {
+            struct fsobj *candidate =
+                get_fso(fs, (int)curr->data[i * sizeof(int)]);
+            if ((strcmp(obj, candidate->name) == 0) &&
+                candidate->type == FSDIR) {
+              fs->current_ptr = (int)curr->data[i * sizeof(int)];
+              curr = get_current_fso(fs);
+              break;
+            } else if (i == curr->size - 1) { // last iteration without success
+              return 1; // TODO add restore to initial position
+            }
+          }
+          obj = strtok(NULL, "/");
+        }
       }
 
     } else if (strcmp(token, "mkdir") == 0) {
@@ -157,7 +168,7 @@ int main(int argc, char **argv) {
         curr->size++;
         curr->data[(curr->size - 1) * sizeof(int)] = i;
 
-        new_fsobj_dir(get_fso(fs, i), token);
+        new_fsobj_dir(fs, i, token);
       }
 
     } else if (strcmp(token, "touch") == 0) {
@@ -177,10 +188,11 @@ int main(int argc, char **argv) {
       }
 
     } else if (strcmp(token, "ls") == 0) {
-      for (int i = 0; i < curr->size; i++) {
+      for (int i = 1; i < curr->size; i++) {
         struct fsobj *elem = get_fso(fs, (int)curr->data[i * sizeof(int)]);
         if (elem->type == FSDIR) {
-          printf("Type: dir\tName: %s\tSize: %d\n", elem->name, elem->size);
+          // parental dir is not considered as a size factor nor displayed
+          printf("Type: dir\tName: %s\tSize: %d\n", elem->name, elem->size - 1);
         } else if (elem->type == FSFILE) {
           printf("Type: file\tName: %s\tSize: %d\n", elem->name, elem->size);
         }
